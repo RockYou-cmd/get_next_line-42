@@ -5,120 +5,102 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: ael-korc <ael-korc@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/12/14 11:59:00 by ael-korc          #+#    #+#             */
-/*   Updated: 2021/12/14 11:59:02 by ael-korc         ###   ########.fr       */
+/*   Created: 2021/12/14 12:10:14 by ael-korc          #+#    #+#             */
+/*   Updated: 2021/12/14 14:31:19 by ael-korc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-int	ft_line(char	*tab)
+char	*ft_get_line(char *save)
 {
-	size_t	i;
+	int		i;
+	char	*str;
 
 	i = 0;
-	if (!tab)
+	if (!save[i])
+		return (NULL);
+	while (save[i] && save[i] != '\n')
+		i++;
+	str = (char *)malloc(sizeof(char) * (i + 2));
+	if (!str)
+		return (NULL);
+	i = 0;
+	while (save[i] && save[i] != '\n')
 	{
-		return (-1);
-	}
-	while (tab[i])
-	{
-		if (tab[i] == '\n')
-			return (i);
+		str[i] = save[i];
 		i++;
 	}
-	return (-1);
-}
-
-char	*readthis(int fd, char *str, char *buff)
-{
-	int		r;
-	char	*tmp;
-
-	if (str == NULL)
-		str = ft_strdup("");
-	r = 0;
-	while (ft_line(str) == -1)
+	if (save[i] == '\n')
 	{
-		r = read(fd, buff, BUFFER_SIZE);
-		if (r > 0)
-		{
-			buff[r] = '\0';
-			tmp = ft_strjoin(str, buff);
-			if (str)
-				free(str);
-			str = NULL;
-			str = tmp;
-		}
-		else
-			break ;
+		str[i] = save[i];
+		i++;
 	}
-	free(buff);
+	str[i] = '\0';
 	return (str);
 }
 
-char	*ft_place(char	*test)
+char	*ft_save(char *save)
 {
-	char	*line;
-	int		index;
-	size_t	i;
+	int		i;
+	int		c;
+	char	*s;
 
-	if (ft_strlen(test) == 0)
-		return (NULL);
-	index = ft_line(test);
-	if (index == -1)
-	{
-		line = ft_strdup(test);
-		return (line);
-	}
-	line = (char *)malloc((index + 2) * sizeof(char));
-	if (!line)
-		return (NULL);
 	i = 0;
-	while (test[i] != '\n')
-	{
-		line[i] = test[i];
+	while (save[i] && save[i] != '\n')
 		i++;
+	if (!save[i])
+	{
+		free(save);
+		return (NULL);
 	}
-	line[i] = '\n';
-	line [i + 1] = '\0';
-	return (line);
+	s = (char *)malloc(sizeof(char) * (ft_strlen(save) - i + 1));
+	if (!s)
+		return (NULL);
+	i++;
+	c = 0;
+	while (save[i])
+		s[c++] = save[i++];
+	s[c] = '\0';
+	free(save);
+	return (s);
 }
 
-char	*ft_remain(char	*remain)
+char	*ft_read_and_save(int fd, char *save)
 {
-	int		len;
-	int		index;
-	char	*tmp;
+	char	*buff;
+	int		read_bytes;
 
-	if (!remain)
+	buff = malloc((BUFFER_SIZE + 1) * sizeof(char));
+	if (!buff)
 		return (NULL);
-	len = ft_strlen(remain);
-	index = ft_line(remain);
-	if (index != -1)
+	read_bytes = 1;
+	while (ft_strchr(save, '\n') == NULL && read_bytes != 0)
 	{
-		tmp = ft_substr(remain, (index + 1), (len - index - 1));
-		free (remain);
-		remain = tmp;
-		return (remain);
+		read_bytes = read(fd, buff, BUFFER_SIZE);
+		if (read_bytes == -1)
+		{
+			free(buff);
+			return (NULL);
+		}
+		buff[read_bytes] = '\0';
+		save = ft_strjoin(save, buff);
 	}
-	free (remain);
-	return (NULL);
+	free(buff);
+	return (save);
 }
 
 char	*get_next_line(int fd)
 {
-	static char	*test;
-	char		*place;
-	char		*buff;
+	char		*line;
+	static char	*save;
 
-	if (BUFFER_SIZE <= 0 || fd < 0)
+	if (fd < 0 || BUFFER_SIZE <= 0)
+		return (0);
+	save = ft_read_and_save(fd, save);
+	if (!save)
 		return (NULL);
-	buff = malloc(sizeof(char) * (BUFFER_SIZE + 1));
-	if (!buff)
-		return (NULL);
-	test = readthis(fd, test, buff);
-	place = ft_place(test);
-	test = ft_remain(test);
-	return (place);
+	line = ft_get_line(save);
+	save = ft_save(save);
+	return (line);
 }
